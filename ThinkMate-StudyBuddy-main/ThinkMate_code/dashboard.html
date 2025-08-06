@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Dashboard - ThinkMate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --primary-color-dark: #45a049;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        .primary-bg { background-color: var(--primary-color); }
+        .primary-bg-dark-hover:hover { background-color: var(--primary-color-dark); }
+        .primary-text { color: var(--primary-color); }
+        .primary-border { border-color: var(--primary-color); }
+        
+        /* Scrollbar styling */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d4d4d8;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a1a1aa;
+        }
+
+        /* Progress indicators */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        /* Document card */
+        .document-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* Highlight effect */
+        .highlighted {
+            background-color: rgba(255, 255, 0, 0.3);
+            transition: background-color 0.3s ease;
+        }
+        
+        /* PDF Viewer Container */
+        #pdf-container {
+            position: relative;
+            width: 100%;
+            min-height: 100px;
+            overflow: hidden;
+        }
+        
+        /* Text layer for PDF */
+        .text-layer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            opacity: 0.2;
+            line-height: 1.0;
+        }
+        
+        .text-layer > span {
+            color: transparent;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+        }
+        
+        .text-layer .highlight {
+            margin: -1px;
+            padding: 1px;
+            background-color: rgba(255, 255, 0, 0.3);
+            border-radius: 4px;
+        }
+        
+        .text-layer .highlight.applied {
+            background-color: rgba(255, 255, 0, 0.7);
+        }
+        
+        /* Sidebar scrollable area */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .sidebar > .flex-1 {
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        /* Ensure the scrollable area doesn't shrink */
+        .sidebar > .flex-1 {
+            flex: 1 1 auto;
+        }
+
+        /* Custom scrollbar for sidebar */
+        .sidebar .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .sidebar .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d4d4d8;
+            border-radius: 10px;
+        }
+
+        .sidebar .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a1a1aa;
+        }
+        
+        /* Responsive sidebar */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -100%;
+                top: 0;
+                z-index: 50;
+                height: 100vh;
+                transition: left 0.3s ease;
+            }
+            .sidebar.active {
+                left: 0;
+            }
+            .overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0,0,0,0.5);
+                z-index: 40;
+            }
+            .overlay.active {
+                display: block;
+            }
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.error {
+            background-color: #f44336;
+        }
+        
+        /* Loading indicator */
+        .loader {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Empty state styles */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body class="h-full overflow-hidden">
+    <div class="flex h-full flex-col">
+        <!-- Header Section -->
+        <header class="flex-shrink-0 bg-white shadow-md z-10">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <!-- Left: Title -->
+                    <div class="flex items-center">
+                        <button id="mobile-menu-btn" class="mr-3 p-2 rounded-full hover:bg-gray-200 lg:hidden">
+                            <svg class="h-6 w-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <a href="#" class="text-2xl font-bold primary-text">📚 ThinkMate</a>
+                    </div>
+                    
+                    <!-- Center: Mode Navigation -->
+                    <div class="hidden lg:flex items-center space-x-2 sm:space-x-4 rounded-lg bg-gray-200 p-1">
+                        <a href="app.html" class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300">
+                            <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v11.494m-9-5.747h18"/></svg>
+                            Study
+                        </a>
+                        <a href="quiz.html" class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300">
+                            <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Quiz
+                        </a>
+                        <a href="flashcards.html" class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300">
+                           <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                            Flashcards
+                        </a>
+                        <span class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors primary-bg text-white">
+                            <svg class="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Dashboard
+                        </span>
+                    </div>
+                    
+                    <!-- Right: Notification and Settings -->
+                    <div class="flex items-center space-x-2">
+                        <!-- Notification Button -->
+                        <div class="relative">
+                            <button id="notifications-btn" class="p-2 rounded-full hover:bg-gray-200 relative">
+                                <svg class="h-6 w-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <span id="notification-badge" class="notification-badge hidden">3</span>
+                            </button>
+                        </div>
+                        <!-- Settings Button -->
+                        <a href="#" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                            <svg class="h-6 w-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow flex min-h-0 overflow-hidden">
+            <!-- Sidebar (Study Tools) -->
+            <div class="sidebar w-full lg:w-80 bg-white shadow-md z-10 flex flex-col">
+                <!-- Scrollable Content -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar">
+                    <!-- Breadcrumb -->
+                    <div class="p-4 border-b">
+                        <nav class="flex" aria-label="Breadcrumb">
+                            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                                <li class="inline-flex items-center">
+                                    <a href="#" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-green-600">
+                                        <svg class="w-3 h-3 mr-2.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M16 0H4a2 2 0 0 0-2 2v1H1a1 1 0 0 0 0 2h1v2H1a1 1 0 0 0 0 2h1v2H1a1 1 0 0 0 0 2h1v2H1a1 1 0 0 0 0 2h1v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2Zm-5.5 4.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM13.929 17H7.071a.5.5 0 0 1-.5-.5 3.935 3.935 0 1 1 7.858 0 .5.5 0 0 1-.5.5Z"/>
+                                        </svg>
+                                        Home
+                                    </a>
+                                </li>
+                                <li aria-current="page">
+                                    <div class="flex items-center">
+                                        <svg class="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+                                        </svg>
+                                        <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2">Study Dashboard</span>
+                                    </div>
+                                </li>
+                            </ol>
+                        </nav>
+                    </div>
+                    
+                    <!-- Study Progress Dashboard -->
+                    <div class="p-4 border-b">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Study Progress</h2>
+                        <div class="flex justify-between">
+                            <div class="text-center">
+                                <div class="relative w-16 h-16 mx-auto">
+                                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                                        <circle class="text-gray-200 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                        <circle class="primary-text progress-ring__circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                                            stroke-dasharray="251.2"
+                                            stroke-dashoffset="75.36"></circle>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center text-sm font-bold">70%</div>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-600">Overall</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="relative w-16 h-16 mx-auto">
+                                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                                        <circle class="text-gray-200 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                        <circle class="text-blue-500 progress-ring__circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                                            stroke-dasharray="251.2"
+                                            stroke-dashoffset="125.6"></circle>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center text-sm font-bold">50%</div>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-600">Concepts</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="relative w-16 h-16 mx-auto">
+                                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                                        <circle class="text-gray-200 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                                        <circle class="text-purple-500 progress-ring__circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                                            stroke-dasharray="251.2"
+                                            stroke-dashoffset="175.84"></circle>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center text-sm font-bold">30%</div>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-600">History</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Activity -->
+                    <div class="p-4 border-b">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-3">Recent Activity</h2>
+                        <div id="recent-activity-list" class="space-y-3">
+                            <!-- Will be populated from localStorage -->
+                        </div>
+                    </div>
+                    
+                    <!-- Current Study Materials -->
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-lg font-semibold text-gray-800">Study Materials</h2>
+                            <button id="add-material-btn" class="text-green-600 hover:text-green-800 text-sm">
+                                <i class="fas fa-plus mr-1"></i> Add
+                            </button>
+                        </div>
+                        <div id="study-materials-list" class="space-y-3">
+                            <!-- Will be populated from localStorage -->
+                        </div>
+                    </div>
+                    
+                    <!-- Study Notes -->
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-lg font-semibold text-gray-800">Study Notes</h2>
+                            <button id="add-note-btn" class="text-green-600 hover:text-green-800 text-sm">
+                                <i class="fas fa-plus mr-1"></i> New
+                            </button>
+                        </div>
+                        <div id="study-notes-list" class="space-y-3">
+                            <!-- Will be populated from localStorage -->
+                        </div>
+                    </div>
+                    
+                    <!-- Bookmarked Concepts -->
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h2 class="text-lg font-semibold text-gray-800">Bookmarks</h2>
+                            <button id="bookmark-settings-btn" class="text-green-600 hover:text-green-800 text-sm">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                        </div>
+                        <div id="bookmarks-list" class="space-y-2">
+                            <!-- Will be populated from localStorage -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Overlay for mobile sidebar -->
+            <div class="overlay"></div>
+            
+            <!-- Main Content Area -->
+            <div class="flex-1 flex flex-col min-w-0 min-h-0">
+                <!-- Tab Navigation -->
+                <div class="flex-shrink-0 bg-white border-b">
+                    <div class="flex">
+                        <button id="current-session-tab" class="tab-btn px-6 py-4 font-medium text-sm border-b-2 border-green-500 text-green-600">
+                            Current Session
+                        </button>
+                        <button id="study-history-tab" class="tab-btn px-6 py-4 font-medium text-sm text-gray-500 hover:text-gray-700">
+                            Study History
+                        </button>
+                        <button id="my-notes-tab" class="tab-btn px-6 py-4 font-medium text-sm text-gray-500 hover:text-gray-700">
+                            My Notes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Document Viewer -->
+                <div id="current-session-content" class="flex-1 flex flex-col min-h-0">
+                    <!-- Toolbar -->
+                    <div class="bg-gray-50 border-b p-3 flex items-center">
+                        <div class="flex space-x-2">
+                            <button id="zoom-in-btn" class="p-2 rounded hover:bg-gray-200" title="Zoom In">
+                                <i class="fas fa-search-plus text-gray-600"></i>
+                            </button>
+                            <button id="zoom-out-btn" class="p-2 rounded hover:bg-gray-200" title="Zoom Out">
+                                <i class="fas fa-search-minus text-gray-600"></i>
+                            </button>
+                            <div class="border-l mx-1"></div>
+                            <button id="highlight-btn" class="p-2 rounded hover:bg-gray-200" title="Highlight">
+                                <i class="fas fa-highlighter text-gray-600"></i>
+                            </button>
+                            <button id="add-note-btn-2" class="p-2 rounded hover:bg-gray-200" title="Add Note">
+                                <i class="fas fa-sticky-note text-gray-600"></i>
+                            </button>
+                            <button id="bookmark-btn" class="p-2 rounded hover:bg-gray-200" title="Bookmark">
+                                <i class="fas fa-bookmark text-gray-600"></i>
+                            </button>
+                            <div class="border-l mx-1"></div>
+                            <button id="prev-page-btn" class="p-2 rounded hover:bg-gray-200" title="Previous Page">
+                                <i class="fas fa-arrow-left text-gray-600"></i>
+                            </button>
+                            <div class="flex items-center px-2 text-sm text-gray-600">
+                                Page <input id="page-number" type="number" min="1" value="1" class="w-12 mx-2 border rounded p-1 text-center"> of <span id="total-pages">1</span>
+                            </div>
+                            <button id="next-page-btn" class="p-2 rounded hover:bg-gray-200" title="Next Page">
+                                <i class="fas fa-arrow-right text-gray-600"></i>
+                            </button>
+                        </div>
+                        <div class="ml-auto">
+                            <button id="ask-ai-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-comments mr-2"></i>Ask AI Buddy
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Document Content -->
+                    <div class="flex-1 flex overflow-hidden">
+                        <!-- Document Viewer -->
+                        <div id="pdf-viewer" class="flex-1 bg-gray-100 overflow-auto p-6 custom-scrollbar">
+                            <div class="max-w-4xl mx-auto bg-white shadow-sm p-8">
+                                <div id="pdf-container"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notes Panel -->
+                        <div class="w-80 bg-white border-l flex flex-col">
+                            <div class="p-4 border-b">
+                                <h3 class="font-medium text-gray-800">Notes & Annotations</h3>
+                            </div>
+                            <div id="notes-panel" class="flex-1 overflow-auto p-4 custom-scrollbar">
+                                <p class="text-sm text-gray-500 text-center py-4">Select a note to view</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Study History Content (hidden by default) -->
+                <div id="study-history-content" class="flex-1 flex flex-col min-h-0 hidden">
+                    <div class="p-6 overflow-auto custom-scrollbar">
+                        <h2 class="text-xl font-bold text-gray-800 mb-6">Your Study History</h2>
+                        <div id="study-history-list" class="space-y-4">
+                            <!-- Study history items will be added here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- My Notes Content (hidden by default) -->
+                <div id="my-notes-content" class="flex-1 flex flex-col min-h-0 hidden">
+                    <div class="p-6 overflow-auto custom-scrollbar">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold text-gray-800">My Notes</h2>
+                            <button id="create-new-note-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-plus mr-2"></i>New Note
+                            </button>
+                        </div>
+                        <div id="all-notes-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- All notes will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Material Modal -->
+    <div id="add-material-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Add Study Material</h3>
+                <div id="drop-zone" class="border-2 border-gray-300 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-green-500 transition-colors mb-4">
+                    <p class="text-gray-500">Drag & drop PDF or TXT files here, or click to select</p>
+                    <input id="file-upload" type="file" accept=".pdf,.txt" class="hidden">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-add-material" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                    <button id="confirm-add-material" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50" disabled>Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Note Modal -->
+    <div id="add-note-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Add New Note</h3>
+                <input type="text" id="note-title" class="w-full p-2 border border-gray-300 rounded-md mb-4" placeholder="Note title">
+                <textarea id="note-content" class="w-full p-2 border border-gray-300 rounded-md h-32" placeholder="Write your note here..."></textarea>
+                <div class="flex justify-end space-x-3 mt-4">
+                    <button id="cancel-add-note" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                    <button id="confirm-add-note" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        // Initialize PDF.js with correct worker path
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
+        
+        // Helper functions for safe data parsing
+        function safeParseArray(storedValue) {
+            if (storedValue === null) return [];
+            try {
+                const parsed = JSON.parse(storedValue);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function safeParseObject(storedValue) {
+            if (storedValue === null) return {};
+            try {
+                const parsed = JSON.parse(storedValue);
+                return (parsed && typeof parsed === 'object') ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        // State management with safe initialization
+        const state = {
+            currentPdf: null,
+            currentDocument: null,
+            currentPage: 1,
+            scale: 1.2,
+            isHighlightMode: false,
+            selectedText: '',
+            notes: safeParseArray(localStorage.getItem('studyNotes')),
+            bookmarks: safeParseArray(localStorage.getItem('studyBookmarks')),
+            studyMaterials: safeParseArray(localStorage.getItem('studyMaterials')),
+            studyHistory: safeParseArray(localStorage.getItem('studyHistory')),
+            recentActivity: safeParseArray(localStorage.getItem('recentActivity')),
+            highlights: safeParseObject(localStorage.getItem('studyHighlights'))
+        };
+
+        // DOM Elements with proper initialization timing
+        function getElements() {
+            return {
+                recentActivityList: document.getElementById('recent-activity-list'),
+                studyMaterialsList: document.getElementById('study-materials-list'),
+                studyNotesList: document.getElementById('study-notes-list'),
+                bookmarksList: document.getElementById('bookmarks-list'),
+                currentSessionContent: document.getElementById('current-session-content'),
+                studyHistoryContent: document.getElementById('study-history-content'),
+                myNotesContent: document.getElementById('my-notes-content'),
+                currentSessionTab: document.getElementById('current-session-tab'),
+                studyHistoryTab: document.getElementById('study-history-tab'),
+                myNotesTab: document.getElementById('my-notes-tab'),
+                pdfContainer: document.getElementById('pdf-container'),
+                pageNumber: document.getElementById('page-number'),
+                totalPages: document.getElementById('total-pages'),
+                notesPanel: document.getElementById('notes-panel'),
+                studyHistoryList: document.getElementById('study-history-list'),
+                allNotesList: document.getElementById('all-notes-list'),
+                addMaterialModal: document.getElementById('add-material-modal'),
+                addNoteModal: document.getElementById('add-note-modal'),
+                mobileMenuBtn: document.getElementById('mobile-menu-btn'),
+                sidebar: document.querySelector('.sidebar'),
+                overlay: document.querySelector('.overlay'),
+                zoomInBtn: document.getElementById('zoom-in-btn'),
+                zoomOutBtn: document.getElementById('zoom-out-btn'),
+                highlightBtn: document.getElementById('highlight-btn'),
+                addNoteBtn: document.getElementById('add-note-btn-2'),
+                bookmarkBtn: document.getElementById('bookmark-btn'),
+                prevPageBtn: document.getElementById('prev-page-btn'),
+                nextPageBtn: document.getElementById('next-page-btn'),
+                askAiBtn: document.getElementById('ask-ai-btn'),
+                addMaterialBtn: document.getElementById('add-material-btn'),
+                cancelAddMaterial: document.getElementById('cancel-add-material'),
+                confirmAddMaterial: document.getElementById('confirm-add-material'),
+                fileUpload: document.getElementById('file-upload'),
+                dropZone: document.getElementById('drop-zone'),
+                addNoteBtnSidebar: document.getElementById('add-note-btn'),
+                cancelAddNote: document.getElementById('cancel-add-note'),
+                confirmAddNote: document.getElementById('confirm-add-note'),
+                noteTitle: document.getElementById('note-title'),
+                noteContent: document.getElementById('note-content'),
+                createNewNoteBtn: document.getElementById('create-new-note-btn'),
+                bookmarkSettingsBtn: document.getElementById('bookmark-settings-btn')
+            };
+        }
+
+        let elements; // Will be initialized after DOM loads
+        
+        // Show toast notification
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize the application
+        function initialize() {
+            elements = getElements(); // Initialize elements after DOM is ready
+            
+            // Load data from localStorage
+            loadStudyMaterials();
+            loadStudyNotes();
+            loadBookmarks();
+            loadRecentActivity();
+            loadStudyHistory();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Update UI
+            updateUI();
+            
+            // If there are study materials, load the first one
+            if (state.studyMaterials.length > 0) {
+                loadPdf(state.studyMaterials[0].file, state.studyMaterials[0].type);
+            } else {
+                // Show empty state for PDF viewer
+                showEmptyState();
+            }
+        }
+
+        // Show empty state for PDF viewer
+        function showEmptyState() {
+            elements.pdfContainer.innerHTML = `
+                <div class="text-center py-12 empty-state">
+                    <i class="fas fa-file-pdf text-4xl mb-4"></i>
+                    <p class="text-gray-500">No document loaded</p>
+                    <button id="empty-state-add-btn" class="mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        <i class="fas fa-plus mr-2"></i>Add Study Material
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('empty-state-add-btn')?.addEventListener('click', () => {
+                elements.addMaterialModal.classList.remove('hidden');
+            });
+        }
+
+        // Load study materials from localStorage
+        function loadStudyMaterials() {
+            elements.studyMaterialsList.innerHTML = '';
+            
+            if (state.studyMaterials.length === 0) {
+                elements.studyMaterialsList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No study materials added yet</p>';
+                return;
+            }
+            
+            state.studyMaterials.forEach((material, index) => {
+                const materialEl = document.createElement('div');
+                materialEl.className = 'document-card bg-white border rounded-lg p-3 flex items-center transition-all duration-300 cursor-pointer';
+                materialEl.innerHTML = `
+                    <div class="${material.type === 'pdf' ? 'bg-red-100' : 'bg-blue-100'} p-2 rounded-lg mr-3">
+                        <i class="fas ${material.type === 'pdf' ? 'fa-file-pdf text-red-600' : 'fa-file-alt text-blue-600'}"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-sm truncate">${material.name}</p>
+                        <p class="text-xs text-gray-500 truncate">Uploaded: ${new Date(material.uploadedAt).toLocaleDateString()}</p>
+                    </div>
+                    <button data-index="${index}" class="delete-material-btn p-1 rounded-full hover:bg-red-200 text-red-500">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                `;
+                
+                // Add click event to load the PDF
+                materialEl.addEventListener('click', (e) => {
+                    // Don't trigger if clicking on the delete button
+                    if (e.target.closest('.delete-material-btn')) {
+                        return;
+                    }
+                    
+                    // Load the document content
+                    loadPdf(material.file, material.type);
+                    
+                    // Update the current document in state
+                    state.currentDocument = material;
+                    
+                    // Add to recent activity
+                    addRecentActivity('Viewed material', material.name);
+                    
+                    // Switch to current session tab
+                    switchTab('current-session');
+                });
+                
+                elements.studyMaterialsList.appendChild(materialEl);
+            });
+            
+            // Add event listeners to delete buttons
+            document.querySelectorAll('.delete-material-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.getAttribute('data-index'));
+                    deleteStudyMaterial(index);
+                });
+            });
+        }
+
+        // Load study notes from localStorage
+        function loadStudyNotes() {
+            elements.studyNotesList.innerHTML = '';
+            elements.allNotesList.innerHTML = '';
+            
+            if (state.notes.length === 0) {
+                elements.studyNotesList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No notes created yet</p>';
+                elements.allNotesList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No notes created yet</p>';
+                return;
+            }
+            
+            // Display recent notes in sidebar
+            const recentNotes = state.notes.slice(0, 3);
+            recentNotes.forEach(note => {
+                const noteEl = document.createElement('div');
+                noteEl.className = 'bg-gray-50 border rounded-lg p-3 cursor-pointer hover:border-green-300 transition-colors';
+                noteEl.innerHTML = `
+                    <p class="font-medium text-sm">${note.title}</p>
+                    <p class="text-xs text-gray-500 mt-1">Created: ${new Date(note.createdAt).toLocaleString()}</p>
+                `;
+                noteEl.addEventListener('click', () => {
+                    showNoteDetails(note);
+                });
+                elements.studyNotesList.appendChild(noteEl);
+            });
+            
+            // Display all notes in the "My Notes" tab
+            state.notes.forEach(note => {
+                const noteCard = document.createElement('div');
+                noteCard.className = 'bg-white border rounded-lg p-4 hover:shadow-md transition-shadow';
+                noteCard.innerHTML = `
+                    <h3 class="font-medium text-gray-800 mb-2">${note.title}</h3>
+                    <p class="text-sm text-gray-600 mb-3 line-clamp-3">${note.content}</p>
+                    <div class="flex justify-between items-center text-xs text-gray-500">
+                        <span>${new Date(note.createdAt).toLocaleDateString()}</span>
+                        <button class="text-green-600 hover:text-green-800 view-note-btn" data-id="${note.id}">
+                            View <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                `;
+                elements.allNotesList.appendChild(noteCard);
+            });
+            
+            // Add event listeners to view note buttons
+            document.querySelectorAll('.view-note-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const noteId = btn.getAttribute('data-id');
+                    const note = state.notes.find(n => n.id === noteId);
+                    if (note) {
+                        showNoteDetails(note);
+                        // Switch to current session tab to view the note
+                        switchTab('current-session');
+                    }
+                });
+            });
+        }
+
+        // Load bookmarks from localStorage
+        function loadBookmarks() {
+            elements.bookmarksList.innerHTML = '';
+            
+            if (state.bookmarks.length === 0) {
+                elements.bookmarksList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No bookmarks added yet</p>';
+                return;
+            }
+            
+            state.bookmarks.forEach(bookmark => {
+                const bookmarkEl = document.createElement('div');
+                bookmarkEl.className = 'flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer';
+                bookmarkEl.innerHTML = `
+                    <i class="fas fa-bookmark text-yellow-500 mr-2"></i>
+                    <p class="text-sm truncate">${bookmark.title}</p>
+                    <span class="ml-auto text-xs text-gray-500">Page ${bookmark.page}</span>
+                `;
+                bookmarkEl.addEventListener('click', () => {
+                    if (state.currentPdf) {
+                        renderPage(bookmark.page);
+                        switchTab('current-session');
+                    }
+                });
+                elements.bookmarksList.appendChild(bookmarkEl);
+            });
+        }
+
+        // Load recent activity from localStorage
+        function loadRecentActivity() {
+            elements.recentActivityList.innerHTML = '';
+            
+            if (state.recentActivity.length === 0) {
+                elements.recentActivityList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No recent activity</p>';
+                return;
+            }
+            
+            state.recentActivity.slice(0, 5).forEach(activity => {
+                const activityEl = document.createElement('div');
+                activityEl.className = 'flex items-start';
+                
+                let iconClass = '';
+                let iconBg = '';
+                let icon = '';
+                
+                if (activity.type === 'studied') {
+                    iconClass = 'text-green-600';
+                    iconBg = 'bg-green-100';
+                    icon = 'fa-book';
+                } else if (activity.type === 'uploaded') {
+                    iconClass = 'text-blue-600';
+                    iconBg = 'bg-blue-100';
+                    icon = 'fa-file-pdf';
+                } else if (activity.type === 'bookmarked') {
+                    iconClass = 'text-purple-600';
+                    iconBg = 'bg-purple-100';
+                    icon = 'fa-star';
+                } else if (activity.type === 'note') {
+                    iconClass = 'text-yellow-600';
+                    iconBg = 'bg-yellow-100';
+                    icon = 'fa-sticky-note';
+                }
+                
+                activityEl.innerHTML = `
+                    <div class="${iconBg} p-2 rounded-full mr-3">
+                        <i class="fas ${icon} ${iconClass} text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium">${activity.action}</p>
+                        <p class="text-xs text-gray-500">${new Date(activity.timestamp).toLocaleString()}</p>
+                    </div>
+                `;
+                elements.recentActivityList.appendChild(activityEl);
+            });
+        }
+
+        // Load study history from localStorage
+        function loadStudyHistory() {
+            elements.studyHistoryList.innerHTML = '';
+            
+            if (state.studyHistory.length === 0) {
+                elements.studyHistoryList.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No study history yet</p>';
+                return;
+            }
+            
+            state.studyHistory.forEach(session => {
+                const sessionEl = document.createElement('div');
+                sessionEl.className = 'bg-white border rounded-lg p-4 hover:shadow-md transition-shadow';
+                sessionEl.innerHTML = `
+                    <h3 class="font-medium text-gray-800 mb-1">${session.materialName || 'Study Session'}</h3>
+                    <p class="text-sm text-gray-600 mb-2">${session.duration} minutes</p>
+                    <div class="flex justify-between items-center text-xs text-gray-500">
+                        <span>${new Date(session.date).toLocaleDateString()}</span>
+                        <span>${session.pageCount || 0} pages viewed</span>
+                    </div>
+                `;
+                elements.studyHistoryList.appendChild(sessionEl);
+            });
+        }
+
+        // Load a PDF or text file into the viewer
+        function loadPdf(fileContent, fileType = 'pdf') {
+            if (!fileContent) return;
+            
+            // Clear the current PDF container
+            elements.pdfContainer.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="loader"></div>
+                    <p>Loading document...</p>
+                </div>
+            `;
+            
+            if (fileType === 'pdf') {
+                // Load the PDF file
+                const loadingTask = pdfjsLib.getDocument({data: fileContent});
+                loadingTask.promise.then(pdf => {
+                    state.currentPdf = pdf;
+                    elements.totalPages.textContent = pdf.numPages;
+                    state.currentPage = 1;
+                    elements.pageNumber.value = state.currentPage;
+                    
+                    // Load the first page
+                    renderPage(state.currentPage);
+                    
+                    // Add to study history
+                    addStudySession(pdf.numPages);
+                    
+                    // Load any saved highlights for this document
+                    loadHighlights();
+                }).catch(err => {
+                    console.error('PDF loading error:', err);
+                    showErrorInViewer('Failed to load PDF file');
+                });
+            } else {
+                // Handle text files
+                const textContent = typeof fileContent === 'string' ? fileContent : new TextDecoder().decode(fileContent);
+                elements.pdfContainer.innerHTML = `
+                    <div class="p-6">
+                        <pre class="whitespace-pre-wrap font-mono text-sm">${escapeHtml(textContent)}</pre>
+                    </div>
+                `;
+                elements.totalPages.textContent = '1';
+                state.currentPage = 1;
+                elements.pageNumber.value = '1';
+                
+                // Add to study history
+                addStudySession(1);
+            }
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showErrorInViewer(message) {
+            elements.pdfContainer.innerHTML = `
+                <div class="text-center py-8 text-red-600">
+                    <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // Render a specific page of the PDF
+        function renderPage(pageNum) {
+            if (!state.currentPdf || pageNum < 1 || pageNum > state.currentPdf.numPages) return;
+            
+            state.currentPage = pageNum;
+            elements.pageNumber.value = state.currentPage;
+            
+            state.currentPdf.getPage(pageNum).then(page => {
+                const viewport = page.getViewport({scale: state.scale});
+                
+                // Prepare canvas
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                // Clear the container and append the canvas
+                elements.pdfContainer.innerHTML = '';
+                elements.pdfContainer.appendChild(canvas);
+                
+                // Render PDF page into canvas context
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                
+                page.render(renderContext).promise.then(() => {
+                    // Set up text selection and highlighting
+                    setupTextSelection(page, viewport);
+                });
+            });
+        }
+
+        // Set up text selection and highlighting
+        function setupTextSelection(page, viewport) {
+            // Clear previous text layer if exists
+            const existingTextLayer = document.querySelector('.text-layer');
+            if (existingTextLayer) {
+                existingTextLayer.remove();
+            }
+            
+            // Create a new text layer div
+            const textLayerDiv = document.createElement('div');
+            textLayerDiv.className = 'text-layer';
+            textLayerDiv.style.width = `${viewport.width}px`;
+            textLayerDiv.style.height = `${viewport.height}px`;
+            
+            // Append the text layer to the PDF container
+            elements.pdfContainer.appendChild(textLayerDiv);
+            
+            // Get text content from the page
+            page.getTextContent().then(textContent => {
+                // Pass the text content to the text layer builder
+                pdfjsLib.renderTextLayer({
+                    textContent: textContent,
+                    container: textLayerDiv,
+                    viewport: viewport,
+                    textDivs: []
+                });
+                
+                // Apply any existing highlights for this page
+                applyHighlightsForPage(state.currentPage);
+                
+                // Enable text selection
+                textLayerDiv.style.pointerEvents = 'auto';
+                
+                // Set up highlighting
+                if (state.isHighlightMode) {
+                    enableHighlightMode();
+                }
+                
+                // Add event listeners for text selection
+                textLayerDiv.addEventListener('mouseup', handleTextSelection);
+            });
+        }
+
+        // Handle text selection
+        function handleTextSelection() {
+            const selection = window.getSelection();
+            if (!selection || selection.isCollapsed || !state.isHighlightMode) return;
+            
+            state.selectedText = selection.toString().trim();
+            if (!state.selectedText) return;
+            
+            // Get the range of the selection
+            const range = selection.getRangeAt(0);
+            
+            // Create a highlight element
+            const highlightSpan = document.createElement('span');
+            highlightSpan.className = 'highlight';
+            highlightSpan.dataset.highlightId = Date.now().toString();
+            highlightSpan.dataset.page = state.currentPage;
+            
+            // Wrap the selected text in the highlight span
+            range.surroundContents(highlightSpan);
+            
+            // Apply the highlight style
+            setTimeout(() => {
+                highlightSpan.classList.add('applied');
+            }, 10);
+            
+            // Save the highlight
+            saveHighlight(state.currentPage, highlightSpan.dataset.highlightId, state.selectedText);
+            
+            // Add a note for this highlight
+            addNoteForHighlight(state.selectedText);
+            
+            // Clear selection
+            selection.removeAllRanges();
+        }
+
+        // Save a highlight to localStorage
+        function saveHighlight(pageNum, highlightId, text) {
+            const docId = state.currentDocument?.id || 'default';
+            
+            if (!state.highlights[docId]) {
+                state.highlights[docId] = {};
+            }
+            
+            if (!state.highlights[docId][pageNum]) {
+                state.highlights[docId][pageNum] = [];
+            }
+            
+            state.highlights[docId][pageNum].push({
+                id: highlightId,
+                text: text,
+                createdAt: new Date().toISOString()
+            });
+            
+            localStorage.setItem('studyHighlights', JSON.stringify(state.highlights));
+        }
+
+        // Load highlights for the current document
+        function loadHighlights() {
+            const docId = state.currentDocument?.id || 'default';
+            
+            if (state.highlights[docId]) {
+                // Highlights will be applied when each page is rendered
+                return;
+            }
+        }
+
+        // Apply highlights for a specific page
+        function applyHighlightsForPage(pageNum) {
+            const docId = state.currentDocument?.id || 'default';
+            
+            if (!state.highlights[docId] || !state.highlights[docId][pageNum]) return;
+            
+            const textLayer = document.querySelector('.text-layer');
+            if (!textLayer) return;
+            
+            const textNodes = textLayer.querySelectorAll('span');
+            const pageHighlights = state.highlights[docId][pageNum];
+            
+            pageHighlights.forEach(highlight => {
+                for (let i = 0; i < textNodes.length; i++) {
+                    const node = textNodes[i];
+                    if (node.textContent.includes(highlight.text)) {
+                        const regex = new RegExp(highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                        const newHTML = node.innerHTML.replace(regex, `<span class="highlight applied" data-highlight-id="${highlight.id}" data-page="${pageNum}">$&</span>`);
+                        node.innerHTML = newHTML;
+                        break;
+                    }
+                }
+            });
+        }
+
+        // Enable highlight mode
+        function enableHighlightMode() {
+            state.isHighlightMode = true;
+            elements.highlightBtn.classList.add('bg-gray-200');
+            document.getElementById('pdf-viewer').style.cursor = 'text';
+            showToast('Highlight mode enabled. Select text to highlight.');
+        }
+
+        // Disable highlight mode
+        function disableHighlightMode() {
+            state.isHighlightMode = false;
+            elements.highlightBtn.classList.remove('bg-gray-200');
+            document.getElementById('pdf-viewer').style.cursor = 'auto';
+            showToast('Highlight mode disabled.');
+        }
+
+        // Add a note for a highlighted text
+        function addNoteForHighlight(text) {
+            const noteId = Date.now().toString();
+            const newNote = {
+                id: noteId,
+                title: `Note on page ${state.currentPage}`,
+                content: `Highlighted text: "${text}"\n\nYour notes here...`,
+                createdAt: new Date().toISOString(),
+                page: state.currentPage,
+                highlightText: text
+            };
+            
+            state.notes.unshift(newNote);
+            saveNotes();
+            loadStudyNotes();
+            
+            // Show the note in the notes panel
+            showNoteDetails(newNote);
+            
+            // Add to recent activity
+            addRecentActivity('Added note', `for highlighted text on page ${state.currentPage}`);
+            showToast('Note created for highlighted text');
+        }
+
+        // Show note details in the notes panel
+        function showNoteDetails(note) {
+            elements.notesPanel.innerHTML = `
+                <div class="mb-6" data-note-id="${note.id}">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="font-medium">${note.title}</p>
+                        <button class="text-gray-400 hover:text-gray-600 delete-note-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    ${note.highlightText ? `
+                    <div class="bg-yellow-100 p-3 rounded-lg mb-2">
+                        <p class="text-sm">"${note.highlightText}"</p>
+                    </div>
+                    ` : ''}
+                    <div class="text-sm text-gray-700">
+                        <p>${note.content.replace(/\n/g, '<br>')}</p>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-500">
+                        Created: ${new Date(note.createdAt).toLocaleString()}
+                    </div>
+                </div>
+            `;
+            
+            // Add event listener to delete button
+            const deleteBtn = elements.notesPanel.querySelector('.delete-note-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    deleteNote(note.id);
+                });
+            }
+        }
+
+        // Add a new study material
+        function addStudyMaterial(file) {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const fileContent = e.target.result;
+                const fileType = file.name.endsWith('.pdf') ? 'pdf' : 'text';
+                
+                const newMaterial = {
+                    id: Date.now().toString(),
+                    name: file.name,
+                    type: fileType,
+                    file: fileType === 'pdf' ? fileContent : new TextEncoder().encode(fileContent),
+                    uploadedAt: new Date().toISOString()
+                };
+                
+                state.studyMaterials.unshift(newMaterial);
+                saveStudyMaterials();
+                loadStudyMaterials();
+                
+                // Load the new material
+                loadPdf(newMaterial.file, newMaterial.type);
+                
+                // Set as current document
+                state.currentDocument = newMaterial;
+                
+                // Add to recent activity
+                addRecentActivity('Uploaded material', file.name);
+                showToast(`Added "${file.name}" to study materials`);
+            };
+            
+            if (file.name.endsWith('.pdf')) {
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        // Delete a study material
+        function deleteStudyMaterial(index) {
+            if (index >= 0 && index < state.studyMaterials.length) {
+                const material = state.studyMaterials[index];
+                
+                // Remove any highlights for this document
+                if (state.highlights[material.id]) {
+                    delete state.highlights[material.id];
+                    saveHighlights();
+                }
+                
+                state.studyMaterials.splice(index, 1);
+                saveStudyMaterials();
+                loadStudyMaterials();
+                
+                // Clear the viewer if we deleted the current document
+                if (state.studyMaterials.length === 0) {
+                    showEmptyState();
+                    state.currentPdf = null;
+                    state.currentDocument = null;
+                } else if (state.currentDocument?.id === material.id) {
+                    // If we deleted the current document, load the first available one
+                    loadPdf(state.studyMaterials[0].file, state.studyMaterials[0].type);
+                    state.currentDocument = state.studyMaterials[0];
+                }
+                
+                // Add to recent activity
+                addRecentActivity('Deleted material', material.name);
+                showToast(`Removed "${material.name}" from study materials`);
+            }
+        }
+
+        // Add a new note
+        function addNewNote(title, content) {
+            const newNote = {
+                id: Date.now().toString(),
+                title: title,
+                content: content,
+                createdAt: new Date().toISOString()
+            };
+            
+            state.notes.unshift(newNote);
+            saveNotes();
+            loadStudyNotes();
+            
+            // Show the new note
+            showNoteDetails(newNote);
+            
+            // Add to recent activity
+            addRecentActivity('Added note', title);
+            showToast('Note created successfully');
+        }
+
+        // Delete a note
+        function deleteNote(noteId) {
+            const noteIndex = state.notes.findIndex(note => note.id === noteId);
+            if (noteIndex === -1) return;
+            
+            const noteTitle = state.notes[noteIndex].title;
+            state.notes.splice(noteIndex, 1);
+            saveNotes();
+            loadStudyNotes();
+            elements.notesPanel.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Select a note to view</p>';
+            
+            // Add to recent activity
+            addRecentActivity('Deleted note', noteTitle);
+            showToast(`Deleted note: ${noteTitle}`);
+        }
+
+        // Add a bookmark
+        function addBookmark(title, page) {
+            const newBookmark = {
+                id: Date.now().toString(),
+                title: title,
+                page: page,
+                createdAt: new Date().toISOString()
+            };
+            
+            state.bookmarks.unshift(newBookmark);
+            saveBookmarks();
+            loadBookmarks();
+            
+            // Show confirmation
+            showToast('Bookmark added!');
+            
+            // Add to recent activity
+            addRecentActivity('Bookmarked', title);
+        }
+
+        // Add a study session to history
+        function addStudySession(pageCount) {
+            const newSession = {
+                id: Date.now().toString(),
+                materialName: state.currentDocument?.name || 'Study Session',
+                date: new Date().toISOString(),
+                duration: Math.floor(Math.random() * 60) + 5, // Random duration for demo
+                pageCount: pageCount
+            };
+            
+            state.studyHistory.unshift(newSession);
+            saveStudyHistory();
+            loadStudyHistory();
+        }
+
+        // Add recent activity
+        function addRecentActivity(action, details) {
+            let activityType = 'other';
+            
+            if (action.includes('note')) activityType = 'note';
+            else if (action.includes('material')) activityType = 'uploaded';
+            else if (action.includes('Viewed')) activityType = 'studied';
+            else if (action.includes('Bookmarked')) activityType = 'bookmarked';
+            
+            const newActivity = {
+                id: Date.now().toString(),
+                action: action,
+                details: details,
+                type: activityType,
+                timestamp: new Date().toISOString()
+            };
+            
+            state.recentActivity.unshift(newActivity);
+            saveRecentActivity();
+            loadRecentActivity();
+        }
+
+        // Save data to localStorage
+        function saveStudyMaterials() {
+            localStorage.setItem('studyMaterials', JSON.stringify(state.studyMaterials));
+        }
+
+        function saveNotes() {
+            localStorage.setItem('studyNotes', JSON.stringify(state.notes));
+        }
+
+        function saveBookmarks() {
+            localStorage.setItem('studyBookmarks', JSON.stringify(state.bookmarks));
+        }
+
+        function saveStudyHistory() {
+            localStorage.setItem('studyHistory', JSON.stringify(state.studyHistory));
+        }
+
+        function saveRecentActivity() {
+            localStorage.setItem('recentActivity', JSON.stringify(state.recentActivity));
+        }
+
+        function saveHighlights() {
+            localStorage.setItem('studyHighlights', JSON.stringify(state.highlights));
+        }
+
+        // Switch between tabs
+        function switchTab(tabName) {
+            // Hide all content areas
+            elements.currentSessionContent.classList.add('hidden');
+            elements.studyHistoryContent.classList.add('hidden');
+            elements.myNotesContent.classList.add('hidden');
+            
+            // Reset all tab buttons
+            elements.currentSessionTab.classList.remove('border-b-2', 'border-green-500', 'text-green-600');
+            elements.studyHistoryTab.classList.remove('border-b-2', 'border-green-500', 'text-green-600');
+            elements.myNotesTab.classList.remove('border-b-2', 'border-green-500', 'text-green-600');
+            elements.currentSessionTab.classList.add('text-gray-500');
+            elements.studyHistoryTab.classList.add('text-gray-500');
+            elements.myNotesTab.classList.add('text-gray-500');
+            
+            // Show the selected content area and update the tab button
+            if (tabName === 'current-session') {
+                elements.currentSessionContent.classList.remove('hidden');
+                elements.currentSessionTab.classList.add('border-b-2', 'border-green-500', 'text-green-600');
+                elements.currentSessionTab.classList.remove('text-gray-500');
+            } else if (tabName === 'study-history') {
+                elements.studyHistoryContent.classList.remove('hidden');
+                elements.studyHistoryTab.classList.add('border-b-2', 'border-green-500', 'text-green-600');
+                elements.studyHistoryTab.classList.remove('text-gray-500');
+            } else if (tabName === 'my-notes') {
+                elements.myNotesContent.classList.remove('hidden');
+                elements.myNotesTab.classList.add('border-b-2', 'border-green-500', 'text-green-600');
+                elements.myNotesTab.classList.remove('text-gray-500');
+            }
+        }
+
+        // Update UI based on state
+        function updateUI() {
+            // Update progress rings
+            updateProgressRings();
+        }
+
+        // Update progress rings
+        function updateProgressRings() {
+            const circles = document.querySelectorAll('.progress-ring__circle');
+            const progressValues = [70, 50, 30]; // Example values
+            
+            circles.forEach((circle, index) => {
+                const radius = circle.r.baseVal.value;
+                const circumference = radius * 2 * Math.PI;
+                const offset = circumference - (progressValues[index] / 100) * circumference;
+                
+                circle.style.strokeDasharray = `${circumference} ${circumference}`;
+                circle.style.strokeDashoffset = offset;
+            });
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Mobile menu toggle
+            elements.mobileMenuBtn.addEventListener('click', () => {
+                elements.sidebar.classList.toggle('active');
+                elements.overlay.classList.toggle('active');
+            });
+            
+            elements.overlay.addEventListener('click', () => {
+                elements.sidebar.classList.remove('active');
+                elements.overlay.classList.remove('active');
+            });
+            
+            // Tab switching
+            elements.currentSessionTab.addEventListener('click', () => switchTab('current-session'));
+            elements.studyHistoryTab.addEventListener('click', () => switchTab('study-history'));
+            elements.myNotesTab.addEventListener('click', () => switchTab('my-notes'));
+            
+            // PDF navigation
+            elements.prevPageBtn.addEventListener('click', () => {
+                if (state.currentPage > 1) {
+                    renderPage(state.currentPage - 1);
+                }
+            });
+            
+            elements.nextPageBtn.addEventListener('click', () => {
+                if (state.currentPdf && state.currentPage < state.currentPdf.numPages) {
+                    renderPage(state.currentPage + 1);
+                }
+            });
+            
+            elements.pageNumber.addEventListener('change', () => {
+                const pageNum = parseInt(elements.pageNumber.value);
+                if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= (state.currentPdf?.numPages || 1)) {
+                    renderPage(pageNum);
+                } else {
+                    elements.pageNumber.value = state.currentPage;
+                }
+            });
+            
+            // Zoom controls
+            elements.zoomInBtn.addEventListener('click', () => {
+                state.scale += 0.1;
+                renderPage(state.currentPage);
+            });
+            
+            elements.zoomOutBtn.addEventListener('click', () => {
+                if (state.scale > 0.5) {
+                    state.scale -= 0.1;
+                    renderPage(state.currentPage);
+                }
+            });
+            
+            // Highlight mode toggle
+            elements.highlightBtn.addEventListener('click', () => {
+                if (state.isHighlightMode) {
+                    disableHighlightMode();
+                } else {
+                    enableHighlightMode();
+                }
+            });
+            
+            // Bookmark button
+            elements.bookmarkBtn.addEventListener('click', () => {
+                if (state.currentPdf && state.currentPage) {
+                    const materialName = state.currentDocument?.name || 'Current Document';
+                    const bookmarkTitle = `${materialName} - Page ${state.currentPage}`;
+                    addBookmark(bookmarkTitle, state.currentPage);
+                }
+            });
+            
+            // Ask AI button
+            elements.askAiBtn.addEventListener('click', () => {
+                showToast('AI chat feature coming soon!');
+            });
+            
+            // Add material modal
+            elements.addMaterialBtn.addEventListener('click', () => {
+                elements.addMaterialModal.classList.remove('hidden');
+            });
+            
+            elements.cancelAddMaterial.addEventListener('click', () => {
+                elements.addMaterialModal.classList.add('hidden');
+                elements.fileUpload.value = '';
+                elements.confirmAddMaterial.disabled = true;
+            });
+            
+            elements.fileUpload.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    elements.confirmAddMaterial.disabled = false;
+                } else {
+                    elements.confirmAddMaterial.disabled = true;
+                }
+            });
+            
+            elements.confirmAddMaterial.addEventListener('click', () => {
+                if (elements.fileUpload.files.length > 0) {
+                    addStudyMaterial(elements.fileUpload.files[0]);
+                    elements.addMaterialModal.classList.add('hidden');
+                    elements.fileUpload.value = '';
+                    elements.confirmAddMaterial.disabled = true;
+                }
+            });
+            
+            // Drag and drop for files
+            elements.dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                elements.dropZone.classList.add('border-green-500', 'bg-green-50');
+            });
+            
+            elements.dropZone.addEventListener('dragleave', () => {
+                elements.dropZone.classList.remove('border-green-500', 'bg-green-50');
+            });
+            
+            elements.dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.dropZone.classList.remove('border-green-500', 'bg-green-50');
+                
+                if (e.dataTransfer.files.length > 0) {
+                    elements.fileUpload.files = e.dataTransfer.files;
+                    elements.confirmAddMaterial.disabled = false;
+                    showToast('File ready to upload');
+                }
+            });
+            
+            // Add note modal
+            elements.addNoteBtn.addEventListener('click', () => {
+                elements.noteTitle.value = '';
+                elements.noteContent.value = '';
+                elements.addNoteModal.classList.remove('hidden');
+            });
+            
+            elements.addNoteBtnSidebar.addEventListener('click', () => {
+                elements.noteTitle.value = '';
+                elements.noteContent.value = '';
+                elements.addNoteModal.classList.remove('hidden');
+            });
+            
+            elements.createNewNoteBtn.addEventListener('click', () => {
+                elements.noteTitle.value = '';
+                elements.noteContent.value = '';
+                elements.addNoteModal.classList.remove('hidden');
+            });
+            
+            elements.cancelAddNote.addEventListener('click', () => {
+                elements.addNoteModal.classList.add('hidden');
+            });
+            
+            elements.confirmAddNote.addEventListener('click', () => {
+                const title = elements.noteTitle.value.trim();
+                const content = elements.noteContent.value.trim();
+                
+                if (title && content) {
+                    addNewNote(title, content);
+                    elements.addNoteModal.classList.add('hidden');
+                } else {
+                    showToast('Please enter both a title and content for the note', true);
+                }
+            });
+            
+            // Bookmark settings
+            elements.bookmarkSettingsBtn.addEventListener('click', () => {
+                showToast('Bookmark settings coming soon');
+            });
+        }
+
+        // Initialize the application after DOM loads
+        document.addEventListener('DOMContentLoaded', initialize);
+        
+        // Initialize with sample data if localStorage is empty
+        window.addEventListener('load', () => {
+            if (state.studyMaterials.length === 0) {
+                // Add sample PDF content
+                const samplePDF = `%PDF-1.4
+                1 0 obj
+                << /Type /Catalog /Pages 2 0 R >>
+                endobj
+                2 0 obj
+                << /Type /Pages /Kids [3 0 R] /Count 1 >>
+                endobj
+                3 0 obj
+                << /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+                endobj
+                4 0 obj
+                << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+                endobj
+                5 0 obj
+                << /Length 73 >>
+                stream
+                BT
+                /F1 24 Tf
+                100 700 Td
+                (Welcome to AI Study Buddy!) Tj
+                ET
+                endstream
+                endobj
+                xref
+                0 6
+                0000000000 65535 f
+                0000000009 00000 n
+                0000000074 00000 n
+                0000000120 00000 n
+                0000000210 00000 n
+                0000000270 00000 n
+                trailer
+                << /Size 6 /Root 1 0 R >>
+                startxref
+                369
+                %%EOF`;
+                
+                state.studyMaterials.push({
+                    id: 'sample',
+                    name: 'Welcome Guide.pdf',
+                    type: 'pdf',
+                    file: samplePDF,
+                    uploadedAt: new Date().toISOString()
+                });
+                
+                saveStudyMaterials();
+                loadStudyMaterials();
+                loadPdf(samplePDF, 'pdf');
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

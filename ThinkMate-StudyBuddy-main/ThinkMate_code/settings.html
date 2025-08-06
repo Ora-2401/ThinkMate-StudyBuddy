@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personalization - ThinkMate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --primary-color-dark: #45a049;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .primary-bg { background-color: var(--primary-color); }
+        .primary-bg-dark-hover:hover { background-color: var(--primary-color-dark); }
+        .primary-text { color: var(--primary-color); }
+        
+        /* Theme options */
+        .theme-option {
+            @apply w-8 h-8 rounded-full cursor-pointer border-2 border-transparent;
+            transition: all 0.3s ease;
+        }
+        .theme-option.active {
+            @apply border-gray-800 scale-110;
+        }
+        .theme-option:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Range slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="h-full">
+    <div class="flex h-full flex-col">
+        <!-- Header -->
+        <header class="flex-shrink-0 bg-white shadow-md z-10">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <a href="app.html" class="text-2xl font-bold primary-text">📚 ThinkMate</a>
+                    <div class="flex items-center">
+                        <div class="flex items-center ml-4">
+                            <span class="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                            <span class="text-xs text-gray-600">API Secured</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Personalization Content -->
+        <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Personalization Center</h2>
+                
+                <!-- Visual Theme -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Visual Theme</label>
+                    <div class="flex space-x-4">
+                        <div class="theme-option bg-gradient-to-br from-green-400 to-blue-500 active" data-theme="default"></div>
+                        <div class="theme-option bg-gradient-to-br from-purple-400 to-pink-500" data-theme="purple"></div>
+                        <div class="theme-option bg-gradient-to-br from-amber-400 to-orange-500" data-theme="amber"></div>
+                        <div class="theme-option bg-gradient-to-br from-sky-400 to-indigo-500" data-theme="sky"></div>
+                    </div>
+                </div>
+                
+                <!-- AI Personality -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">AI Personality</label>
+                    <select id="ai-personality" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="professor">Professor (Formal)</option>
+                        <option value="mentor">Mentor (Supportive)</option>
+                        <option value="researcher">Researcher (Detailed)</option>
+                        <option value="coach">Coach (Motivational)</option>
+                    </select>
+                </div>
+                
+                <!-- Learning Preferences -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Learning Preferences</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="visual-explanations" class="h-4 w-4 text-green-600">
+                            <span class="ml-2">Visual explanations</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="real-world-examples" class="h-4 w-4 text-green-600" checked>
+                            <span class="ml-2">Real-world examples</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="technical-terms" class="h-4 w-4 text-green-600">
+                            <span class="ml-2">Technical terminology</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Difficulty Level -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Content Difficulty</label>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500">Beginner</span>
+                        <input type="range" id="difficulty-level" min="1" max="3" value="2" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <span class="text-sm text-gray-500">Expert</span>
+                    </div>
+                </div>
+                
+                <!-- Reset Settings -->
+                <div class="mb-6 p-4 bg-red-50 rounded-lg">
+                    <h3 class="font-medium text-red-800 mb-2">Reset Options</h3>
+                    <button id="reset-personalization" class="text-red-700 hover:text-red-900 text-sm mr-4">
+                        Reset Personalization
+                    </button>
+                    <button id="reset-data" class="text-red-700 hover:text-red-900 text-sm">
+                        Reset All Data
+                    </button>
+                </div>
+                
+                <!-- Save Button -->
+                <button id="save-settings" class="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold py-3 px-4 rounded-lg hover:from-green-600 hover:to-blue-600 transition-all">
+                    Save Preferences
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+    (() => {
+        // DOM Elements
+        const themeOptions = document.querySelectorAll('.theme-option');
+        const personalitySelect = document.getElementById('ai-personality');
+        const visualExplanations = document.getElementById('visual-explanations');
+        const realWorldExamples = document.getElementById('real-world-examples');
+        const technicalTerms = document.getElementById('technical-terms');
+        const difficultyLevel = document.getElementById('difficulty-level');
+        const saveBtn = document.getElementById('save-settings');
+        const resetPersonalizationBtn = document.getElementById('reset-personalization');
+        const resetDataBtn = document.getElementById('reset-data');
+        
+        // Load settings
+        function loadSettings() {
+            const savedTheme = localStorage.getItem('theme') || 'default';
+            themeOptions.forEach(option => {
+                if (option.dataset.theme === savedTheme) {
+                    option.classList.add('active');
+                } else {
+                    option.classList.remove('active');
+                }
+            });
+            
+            personalitySelect.value = localStorage.getItem('personality') || 'professor';
+            visualExplanations.checked = localStorage.getItem('visualExplanations') === 'true';
+            realWorldExamples.checked = localStorage.getItem('realWorldExamples') !== 'false'; // Default true
+            technicalTerms.checked = localStorage.getItem('technicalTerms') === 'true';
+            difficultyLevel.value = localStorage.getItem('difficultyLevel') || '2';
+        }
+        
+        // Save settings
+        function saveSettings() {
+            const activeTheme = document.querySelector('.theme-option.active').dataset.theme;
+            localStorage.setItem('theme', activeTheme);
+            localStorage.setItem('personality', personalitySelect.value);
+            localStorage.setItem('visualExplanations', visualExplanations.checked);
+            localStorage.setItem('realWorldExamples', realWorldExamples.checked);
+            localStorage.setItem('technicalTerms', technicalTerms.checked);
+            localStorage.setItem('difficultyLevel', difficultyLevel.value);
+            
+            // Show confirmation
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '✓ Saved!';
+            saveBtn.classList.add('from-green-600', 'to-blue-600');
+            setTimeout(() => {
+                saveBtn.textContent = originalText;
+                saveBtn.classList.remove('from-green-600', 'to-blue-600');
+            }, 2000);
+        }
+        
+        // Theme selection
+        themeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                themeOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+            });
+        });
+        
+        // Reset buttons
+        resetPersonalizationBtn.addEventListener('click', () => {
+            if (confirm('Reset all personalization settings to defaults?')) {
+                localStorage.removeItem('theme');
+                localStorage.removeItem('personality');
+                localStorage.removeItem('visualExplanations');
+                localStorage.removeItem('realWorldExamples');
+                localStorage.removeItem('technicalTerms');
+                localStorage.removeItem('difficultyLevel');
+                loadSettings();
+            }
+        });
+        
+        resetDataBtn.addEventListener('click', () => {
+            if (confirm('Reset ALL data including chat history and files? This cannot be undone.')) {
+                localStorage.clear();
+                loadSettings();
+            }
+        });
+        
+        // Event listeners
+        saveBtn.addEventListener('click', saveSettings);
+        
+        // Initialize
+        loadSettings();
+    })();
+    </script>
+</body>
+</html>

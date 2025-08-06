@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flashcards - ThinkMate</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #4caf50;
+        --primary-color-dark: #45a049;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .primary-bg {
+        background-color: var(--primary-color);
+      }
+      .primary-bg-dark-hover:hover {
+        background-color: var(--primary-color-dark);
+      }
+      .primary-text {
+        color: var(--primary-color);
+      }
+
+      /* Flashcard flip animation */
+      .flashcard-scene {
+        perspective: 1000px;
+      }
+      .flashcard {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.6s;
+        cursor: pointer;
+      }
+      .flashcard.is-flipped {
+        transform: rotateY(180deg);
+      }
+      .flashcard-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+        border-radius: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+      .flashcard-front {
+        background-color: white;
+      }
+      .flashcard-back {
+        background-color: #f0fdf4;
+        transform: rotateY(180deg);
+      }
+
+      /* Loader Animation */
+      .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Speech recognition animation */
+      .listening {
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0% {
+          background-color: #f0fdf4;
+        }
+        50% {
+          background-color: #dcfce7;
+        }
+        100% {
+          background-color: #f0fdf4;
+        }
+      }
+
+      /* Shuffle animation */
+      @keyframes shuffle {
+        0% { transform: translateX(0) rotate(0deg); }
+        25% { transform: translateX(-10px) rotate(-5deg); }
+        50% { transform: translateX(10px) rotate(5deg); }
+        75% { transform: translateX(-10px) rotate(-5deg); }
+        100% { transform: translateX(0) rotate(0deg); }
+      }
+      .shuffling {
+        animation: shuffle 0.5s ease-in-out;
+      }
+
+      /* Card mastery indicators */
+      .card-mastery {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+      }
+      .mastery-known {
+        background-color: #4caf50;
+      }
+      .mastery-review {
+        background-color: #f44336;
+      }
+    </style>
+  </head>
+  <body class="h-full">
+    <div class="flex h-full flex-col">
+      <!-- Header -->
+      <header class="flex-shrink-0 bg-white shadow-md z-10">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between h-16">
+            <a href="app.html" class="text-2xl font-bold primary-text"
+              >📚 ThinkMate</a
+            >
+            <div
+              class="flex items-center space-x-2 sm:space-x-4 rounded-lg bg-gray-200 p-1"
+            >
+              <a
+                href="app.html"
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6.253v11.494m-9-5.747h18"
+                  />
+                </svg>
+                Study
+              </a>
+
+              <a
+                href="quiz.html"
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Quiz
+              </a>
+
+              <span
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors primary-bg text-white"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+                Flashcards
+              </span>
+
+              <a
+                href="dashboard.html"
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Dashboard
+              </a>
+            </div>
+            <div class="flex items-center">
+              <a
+                href="settings.html"
+                class="p-2 rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <svg
+                  class="h-6 w-6 text-gray-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Flashcard Content -->
+      <main
+        class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8"
+      >
+        <!-- Configuration Panel -->
+        <aside
+          id="config-panel"
+          class="w-full md:w-1/3 lg:w-1/4 bg-white p-6 rounded-lg shadow-lg"
+        >
+          <h2 class="text-xl font-bold text-gray-800 mb-6">Deck Setup</h2>
+          <div class="space-y-6">
+            <div>
+              <label
+                for="flashcard-subject"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Subject</label
+              >
+              <div class="flex">
+                <select
+                  id="flashcard-subject"
+                  class="w-full p-2 border border-gray-300 rounded-md shadow-sm"
+                ></select>
+                <button
+                  id="subject-speech-btn"
+                  class="ml-2 p-2 rounded-full bg-gray-200 hover:bg-gray-300"
+                >
+                  <svg
+                    class="h-5 w-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+                    ></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div>
+              <label
+                for="num-cards"
+                class="block text-sm font-medium text-gray-700 mb-2"
+                >Number of Cards</label
+              >
+              <input
+                type="number"
+                id="num-cards"
+                value="10"
+                min="1"
+                max="50"
+                class="w-full p-2 border border-gray-300 rounded-md shadow-sm"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Difficulty</label
+              >
+              <div class="flex space-x-4">
+                <label class="flex items-center"
+                  ><input
+                    type="radio"
+                    name="difficulty"
+                    value="Easy"
+                    class="h-4 w-4 text-green-600"
+                    checked
+                  />
+                  <span class="ml-2">Easy</span></label
+                >
+                <label class="flex items-center"
+                  ><input
+                    type="radio"
+                    name="difficulty"
+                    value="Medium"
+                    class="h-4 w-4 text-green-600"
+                  />
+                  <span class="ml-2">Medium</span></label
+                >
+                <label class="flex items-center"
+                  ><input
+                    type="radio"
+                    name="difficulty"
+                    value="Hard"
+                    class="h-4 w-4 text-green-600"
+                  />
+                  <span class="ml-2">Hard</span></label
+                >
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Options</label
+              >
+              <div class="space-y-2">
+                <label class="flex items-center"
+                  ><input
+                    type="checkbox"
+                    id="shuffle-cards"
+                    class="h-4 w-4 text-green-600"
+                    checked
+                  />
+                  <span class="ml-2">Shuffle cards</span></label
+                >
+                <label class="flex items-center"
+                  ><input
+                    type="checkbox"
+                    id="auto-flip"
+                    class="h-4 w-4 text-green-600"
+                  />
+                  <span class="ml-2">Auto-flip after 5 seconds</span></label
+                >
+                <label class="flex items-center"
+                  ><input
+                    type="checkbox"
+                    id="save-progress"
+                    class="h-4 w-4 text-green-600"
+                    checked
+                  />
+                  <span class="ml-2">Save progress</span></label
+                >
+              </div>
+            </div>
+            <button
+              id="generate-deck-btn"
+              class="w-full primary-bg text-white font-bold py-3 px-4 rounded-lg primary-bg-dark-hover transition-colors"
+            >
+              Generate Deck
+            </button>
+          </div>
+          <div id="loader-section" class="hidden text-center py-6">
+            <div class="loader mx-auto"></div>
+            <p class="mt-4 text-gray-600">Building your deck...</p>
+          </div>
+        </aside>
+
+        <!-- Card Display and Controls -->
+        <div
+          id="study-area"
+          class="w-full md:w-2/3 lg:w-3/4 flex-grow flex flex-col items-center justify-center hidden"
+        >
+          <!-- Card -->
+          <div class="w-full max-w-2xl h-80 flashcard-scene mb-6">
+            <div id="flashcard" class="flashcard">
+              <div id="card-front" class="flashcard-face flashcard-front">
+                <span class="text-2xl font-semibold"></span>
+                <div id="front-mastery" class="card-mastery hidden"></div>
+              </div>
+              <div id="card-back" class="flashcard-face flashcard-back">
+                <span class="text-xl"></span>
+                <div id="back-mastery" class="card-mastery hidden"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progress & Navigation -->
+          <div class="flex items-center justify-between w-full max-w-2xl mb-4">
+            <div id="progress-indicator" class="text-gray-600"></div>
+            <div id="timer-display" class="text-gray-600 hidden">00:00</div>
+          </div>
+          <div class="flex items-center space-x-4 mb-6">
+            <button
+              id="prev-card-btn"
+              class="p-3 bg-gray-200 rounded-full hover:bg-gray-300"
+            >
+              <svg
+                class="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <div class="flex space-x-2">
+              <button
+                id="flip-card-btn"
+                class="font-bold py-3 px-6 rounded-lg bg-gray-700 text-white hover:bg-gray-800"
+              >
+                Flip Card
+              </button>
+              <button
+                id="shuffle-btn"
+                class="font-bold py-3 px-6 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300"
+              >
+                Shuffle
+              </button>
+            </div>
+            <button
+              id="next-card-btn"
+              class="p-3 bg-gray-200 rounded-full hover:bg-gray-300"
+            >
+              <svg
+                class="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Mastery Controls -->
+          <div class="flex items-center space-x-4">
+            <button
+              id="mark-review-btn"
+              class="font-semibold py-2 px-5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
+            >
+              Needs Review
+            </button>
+            <button
+              id="mark-known-btn"
+              class="font-semibold py-2 px-5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200"
+            >
+              I Knew This
+            </button>
+          </div>
+        </div>
+
+        <!-- Completion Summary -->
+        <div
+          id="completion-summary"
+          class="w-full md:w-2/3 lg:w-3/4 flex-grow flex-col items-center justify-center text-center hidden"
+        >
+          <div class="bg-white p-8 rounded-lg shadow-lg">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">
+              Deck Complete!
+            </h2>
+            <div id="stats-section" class="grid grid-cols-2 gap-4 text-lg mb-6">
+              <div>
+                Known:
+                <span id="stats-known" class="font-bold primary-text">0</span>
+              </div>
+              <div>
+                For Review:
+                <span id="stats-review" class="font-bold text-red-600">0</span>
+              </div>
+              <div>
+                Time Spent:
+                <span id="stats-time" class="font-bold text-blue-600">0:00</span>
+              </div>
+              <div>
+                Cards Seen:
+                <span id="stats-total" class="font-bold text-gray-600">0</span>
+              </div>
+            </div>
+            <div id="review-list-container" class="mb-8">
+              <h3 class="text-xl font-semibold mb-2">Terms to Review:</h3>
+              <div
+                id="review-list"
+                class="text-left space-y-1 text-sm max-h-40 overflow-y-auto p-3 bg-gray-50 rounded"
+              ></div>
+            </div>
+            <div class="flex justify-center space-x-4">
+              <button
+                id="restart-deck-btn"
+                class="bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-lg hover:bg-gray-300"
+              >
+                Restart Deck
+              </button>
+              <button
+                id="new-deck-btn"
+                class="primary-bg text-white font-bold py-3 px-6 rounded-lg primary-bg-dark-hover"
+              >
+                New Deck
+              </button>
+              <button
+                id="save-deck-btn"
+                class="bg-blue-100 text-blue-700 font-bold py-3 px-6 rounded-lg hover:bg-blue-200"
+              >
+                Save Deck
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        // --- STATE ---
+        let state = {
+          apiKey: "AIzaSyA6yG66yJjqJ362X2ajurQIu9FFkVvpMz0", // Your API key directly set here
+          cards: [],
+          currentIndex: 0,
+          isFlipped: false,
+          speechRecognition: null,
+          isListening: false,
+          startTime: null,
+          timerInterval: null,
+          elapsedTime: 0,
+          autoFlipTimeout: null,
+          settings: {
+            shuffle: true,
+            autoFlip: false,
+            saveProgress: true
+          }
+        };
+
+        // --- DOM ELEMENTS ---
+        const configPanel = document.getElementById("config-panel");
+        const studyArea = document.getElementById("study-area");
+        const completionSummary = document.getElementById("completion-summary");
+        const loaderSection = document.getElementById("loader-section");
+
+        const subjectSelect = document.getElementById("flashcard-subject");
+        const generateDeckBtn = document.getElementById("generate-deck-btn");
+        const subjectSpeechBtn = document.getElementById("subject-speech-btn");
+
+        const flashcard = document.getElementById("flashcard");
+        const cardFront = document.getElementById("card-front").querySelector("span");
+        const cardBack = document.getElementById("card-back").querySelector("span");
+        const frontMastery = document.getElementById("front-mastery");
+        const backMastery = document.getElementById("back-mastery");
+
+        const progressIndicator = document.getElementById("progress-indicator");
+        const timerDisplay = document.getElementById("timer-display");
+        const prevBtn = document.getElementById("prev-card-btn");
+        const nextBtn = document.getElementById("next-card-btn");
+        const flipBtn = document.getElementById("flip-card-btn");
+        const shuffleBtn = document.getElementById("shuffle-btn");
+        const markKnownBtn = document.getElementById("mark-known-btn");
+        const markReviewBtn = document.getElementById("mark-review-btn");
+
+        const statsKnownEl = document.getElementById("stats-known");
+        const statsReviewEl = document.getElementById("stats-review");
+        const statsTimeEl = document.getElementById("stats-time");
+        const statsTotalEl = document.getElementById("stats-total");
+        const reviewList = document.getElementById("review-list");
+        const newDeckBtn = document.getElementById("new-deck-btn");
+        const restartDeckBtn = document.getElementById("restart-deck-btn");
+        const saveDeckBtn = document.getElementById("save-deck-btn");
+
+        // Settings controls
+        const shuffleCheckbox = document.getElementById("shuffle-cards");
+        const autoFlipCheckbox = document.getElementById("auto-flip");
+        const saveProgressCheckbox = document.getElementById("save-progress");
+
+        // --- INITIALIZATION ---
+        function initialize() {
+          // Load settings from localStorage
+          const savedSettings = localStorage.getItem('flashcard_settings');
+          if (savedSettings) {
+            state.settings = JSON.parse(savedSettings);
+            shuffleCheckbox.checked = state.settings.shuffle;
+            autoFlipCheckbox.checked = state.settings.autoFlip;
+            saveProgressCheckbox.checked = state.settings.saveProgress;
+          }
+
+          // Load study materials
+          const materials = JSON.parse(localStorage.getItem("studyMaterials"));
+          if (materials) {
+            const allTopics = new Set([
+              ...(materials.topics || []),
+              ...(materials.uploadedFileNames || [])
+            ]);
+            subjectSelect.innerHTML = [...allTopics]
+              .map((topic) => `<option value="${topic}">${topic}</option>`)
+              .join("");
+          } else {
+            subjectSelect.innerHTML =
+              "<option>Go back to upload materials.</option>";
+            generateDeckBtn.disabled = true;
+          }
+
+          // Check if there's a saved deck
+          const savedDeck = localStorage.getItem('saved_flashcard_deck');
+          if (savedDeck && state.settings.saveProgress) {
+            try {
+              const deckData = JSON.parse(savedDeck);
+              state.cards = deckData.cards || [];
+              state.currentIndex = 0;
+              state.elapsedTime = deckData.elapsedTime || 0;
+              
+              configPanel.classList.add("hidden");
+              studyArea.classList.remove("hidden");
+              completionSummary.classList.add("hidden");
+              
+              displayCard();
+              startTimer();
+            } catch (e) {
+              console.error("Error loading saved deck:", e);
+            }
+          }
+
+          // Initialize speech recognition
+          initSpeechRecognition();
+
+          setupEventListeners();
+        }
+
+        function initSpeechRecognition() {
+          const SpeechRecognition =
+            window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SpeechRecognition) {
+            subjectSpeechBtn.disabled = true;
+            return;
+          }
+
+          state.speechRecognition = new SpeechRecognition();
+          state.speechRecognition.continuous = false;
+          state.speechRecognition.lang = "en-US";
+          state.speechRecognition.interimResults = false;
+          state.speechRecognition.maxAlternatives = 1;
+
+          state.speechRecognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            subjectSelect.value = transcript;
+          };
+
+          state.speechRecognition.onerror = (event) => {
+            console.error("Speech recognition error", event.error);
+            stopSpeechRecognition();
+          };
+
+          state.speechRecognition.onend = () => {
+            stopSpeechRecognition();
+          };
+        }
+
+        function startSubjectSpeechRecognition() {
+          if (state.speechRecognition && !state.isListening) {
+            state.isListening = true;
+            subjectSpeechBtn.classList.add("listening");
+            state.speechRecognition.start();
+          }
+        }
+
+        function stopSpeechRecognition() {
+          state.isListening = false;
+          subjectSpeechBtn.classList.remove("listening");
+        }
+
+        function setupEventListeners() {
+          generateDeckBtn.addEventListener("click", generateDeck);
+          flashcard.addEventListener("click", flipCard);
+          flipBtn.addEventListener("click", flipCard);
+          prevBtn.addEventListener("click", () => navigateCards(-1));
+          nextBtn.addEventListener("click", () => navigateCards(1));
+          markKnownBtn.addEventListener("click", () => markCard("known"));
+          markReviewBtn.addEventListener("click", () => markCard("review"));
+          newDeckBtn.addEventListener("click", () => location.reload());
+          restartDeckBtn.addEventListener("click", restartDeck);
+          saveDeckBtn.addEventListener("click", saveDeck);
+          subjectSpeechBtn.addEventListener(
+            "click",
+            startSubjectSpeechRecognition
+          );
+          shuffleBtn.addEventListener("click", shuffleDeck);
+
+          // Settings event listeners
+          shuffleCheckbox.addEventListener("change", (e) => {
+            state.settings.shuffle = e.target.checked;
+            saveSettings();
+          });
+          autoFlipCheckbox.addEventListener("change", (e) => {
+            state.settings.autoFlip = e.target.checked;
+            saveSettings();
+            if (state.settings.autoFlip && !studyArea.classList.contains("hidden")) {
+              resetAutoFlip();
+            }
+          });
+          saveProgressCheckbox.addEventListener("change", (e) => {
+            state.settings.saveProgress = e.target.checked;
+            saveSettings();
+          });
+        }
+
+        function saveSettings() {
+          localStorage.setItem('flashcard_settings', JSON.stringify(state.settings));
+        }
+
+        // --- DECK GENERATION & MANAGEMENT ---
+        function generateFromLocalMaterials(subject, numCards) {
+          const materials = JSON.parse(localStorage.getItem("studyMaterials"));
+          if (!materials || !materials.topics || !materials.flashcards) {
+            return null;
+          }
+          
+          // Try to find matching topic or file
+          let cards = [];
+          
+          // Check topics
+          const topicIndex = materials.topics.indexOf(subject);
+          if (topicIndex !== -1 && materials.flashcards[topicIndex]) {
+            cards = materials.flashcards[topicIndex].slice(0, numCards);
+            return cards.length > 0 ? cards : null;
+          }
+          
+          // Check uploaded files
+          if (materials.uploadedFileNames && materials.fileContents) {
+            const fileIndex = materials.uploadedFileNames.indexOf(subject);
+            if (fileIndex !== -1 && materials.fileContents[fileIndex]) {
+              // Parse file content for Q&A pairs
+              const content = materials.fileContents[fileIndex];
+              const qaPairs = extractQAPairs(content);
+              cards = qaPairs.slice(0, numCards);
+              return cards.length > 0 ? cards : null;
+            }
+          }
+          
+          return null;
+        }
+
+        function extractQAPairs(content) {
+          if (!content) return [];
+          
+          // Simple extraction of question-answer pairs
+          const lines = content.split('\n');
+          const pairs = [];
+          let currentQ = null;
+          
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
+            
+            if (trimmedLine.endsWith('?')) {
+              if (currentQ) pairs.push({ question: currentQ, answer: trimmedLine });
+              currentQ = trimmedLine;
+            } else if (currentQ) {
+              pairs.push({ question: currentQ, answer: trimmedLine });
+              currentQ = null;
+            }
+          }
+          
+          return pairs;
+        }
+
+        async function generateDeck() {
+          loaderSection.classList.remove("hidden");
+          generateDeckBtn.disabled = true;
+
+          const subject = subjectSelect.value;
+          const numCards = document.getElementById("num-cards").value;
+          const difficulty = document.querySelector(
+            'input[name="difficulty"]:checked'
+          ).value;
+
+          try {
+            // First try to generate from local materials
+            const localCards = generateFromLocalMaterials(subject, numCards);
+            if (localCards && localCards.length > 0) {
+              state.cards = localCards.map((card) => ({
+                term: card.term || card.question || "Term",
+                definition: card.definition || card.answer || "Definition",
+                status: "unseen",
+              }));
+              
+              if (state.settings.shuffle) {
+                shuffleDeck();
+              }
+              
+              state.currentIndex = 0;
+              configPanel.classList.add("hidden");
+              studyArea.classList.remove("hidden");
+              completionSummary.classList.add("hidden");
+              
+              displayCard();
+              startTimer();
+              return;
+            }
+
+            // If no local materials, use API
+            const prompt = `Generate ${numCards} flashcards about "${subject}" with ${difficulty} difficulty. Respond ONLY with a valid JSON object in this format: { "cards": [ { "term": "...", "definition": "..." } ] }`;
+            const jsonString = await callGeminiApi(prompt, state.apiKey);
+            const deckData = JSON.parse(jsonString);
+
+            if (!deckData.cards || deckData.cards.length === 0) {
+              throw new Error("AI did not generate a valid deck.");
+            }
+
+            state.cards = deckData.cards.map((card) => ({
+              ...card,
+              status: "unseen",
+            }));
+            
+            if (state.settings.shuffle) {
+              shuffleDeck();
+            }
+            
+            state.currentIndex = 0;
+
+            configPanel.classList.add("hidden");
+            studyArea.classList.remove("hidden");
+            completionSummary.classList.add("hidden");
+
+            displayCard();
+            startTimer();
+          } catch (error) {
+            console.error("Failed to generate deck:", error);
+            alert(
+              `Failed to generate deck. ${error.message}. Please try again or check your materials.`
+            );
+          } finally {
+            loaderSection.classList.add("hidden");
+            generateDeckBtn.disabled = false;
+          }
+        }
+
+        function shuffleDeck() {
+          // Animate the shuffle
+          flashcard.classList.add('shuffling');
+          setTimeout(() => {
+            flashcard.classList.remove('shuffling');
+          }, 500);
+          
+          // Fisher-Yates shuffle algorithm
+          for (let i = state.cards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [state.cards[i], state.cards[j]] = [state.cards[j], state.cards[i]];
+          }
+          
+          // If we're in the middle of the deck, reset to start
+          if (state.currentIndex > 0) {
+            state.currentIndex = 0;
+            if (state.isFlipped) flipCard();
+            displayCard();
+          }
+        }
+
+        function restartDeck() {
+          state.currentIndex = 0;
+          state.cards.forEach((card) => (card.status = "unseen"));
+          completionSummary.classList.add("hidden");
+          studyArea.classList.remove("hidden");
+          displayCard();
+          resetTimer();
+          startTimer();
+        }
+
+        function saveDeck() {
+          const deckData = {
+            cards: state.cards,
+            subject: subjectSelect.value,
+            elapsedTime: state.elapsedTime,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem('saved_flashcard_deck', JSON.stringify(deckData));
+          alert('Deck saved successfully! You can resume later.');
+        }
+
+        // --- TIMER FUNCTIONS ---
+        function startTimer() {
+          if (state.timerInterval) clearInterval(state.timerInterval);
+          state.startTime = Date.now() - state.elapsedTime;
+          timerDisplay.classList.remove("hidden");
+          
+          state.timerInterval = setInterval(() => {
+            const elapsed = Date.now() - state.startTime;
+            state.elapsedTime = elapsed;
+            
+            const minutes = Math.floor(elapsed / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          }, 1000);
+        }
+
+        function resetTimer() {
+          if (state.timerInterval) clearInterval(state.timerInterval);
+          state.elapsedTime = 0;
+          state.startTime = Date.now();
+          timerDisplay.textContent = "00:00";
+        }
+
+        // --- CARD DISPLAY & INTERACTION ---
+        function displayCard() {
+          if (state.currentIndex >= state.cards.length) {
+            showCompletionScreen();
+            return;
+          }
+
+          if (state.isFlipped) flipCard(); // Flip back to front
+          resetAutoFlip();
+
+          const card = state.cards[state.currentIndex];
+          cardFront.textContent = card.term;
+          cardBack.textContent = card.definition;
+
+          // Update mastery indicators
+          updateMasteryIndicator(card.status);
+
+          progressIndicator.textContent = `Card ${state.currentIndex + 1} of ${
+            state.cards.length
+          }`;
+          prevBtn.disabled = state.currentIndex === 0;
+          nextBtn.disabled = state.currentIndex === state.cards.length - 1;
+
+          // Start auto-flip timer if enabled
+          if (state.settings.autoFlip && !state.isFlipped) {
+            state.autoFlipTimeout = setTimeout(() => {
+              flipCard();
+            }, 5000);
+          }
+        }
+
+        function updateMasteryIndicator(status) {
+          frontMastery.className = "card-mastery";
+          backMastery.className = "card-mastery";
+          
+          if (status === "known") {
+            frontMastery.classList.add("mastery-known");
+            backMastery.classList.add("mastery-known");
+            frontMastery.classList.remove("hidden");
+            backMastery.classList.remove("hidden");
+          } else if (status === "review") {
+            frontMastery.classList.add("mastery-review");
+            backMastery.classList.add("mastery-review");
+            frontMastery.classList.remove("hidden");
+            backMastery.classList.remove("hidden");
+          } else {
+            frontMastery.classList.add("hidden");
+            backMastery.classList.add("hidden");
+          }
+        }
+
+        function resetAutoFlip() {
+          if (state.autoFlipTimeout) {
+            clearTimeout(state.autoFlipTimeout);
+            state.autoFlipTimeout = null;
+          }
+        }
+
+        function flipCard() {
+          resetAutoFlip();
+          state.isFlipped = !state.isFlipped;
+          flashcard.classList.toggle("is-flipped");
+          
+          // Restart auto-flip timer if enabled and we flipped to front
+          if (state.settings.autoFlip && !state.isFlipped) {
+            state.autoFlipTimeout = setTimeout(() => {
+              flipCard();
+            }, 5000);
+          }
+        }
+
+        function navigateCards(direction) {
+          state.currentIndex += direction;
+          displayCard();
+        }
+
+        function markCard(status) {
+          state.cards[state.currentIndex].status = status;
+          updateMasteryIndicator(status);
+          
+          if (state.currentIndex < state.cards.length - 1) {
+            navigateCards(1);
+          } else {
+            displayCard(); // To trigger completion screen
+          }
+        }
+
+        // --- COMPLETION & STATS ---
+        function showCompletionScreen() {
+          if (state.timerInterval) clearInterval(state.timerInterval);
+          studyArea.classList.add("hidden");
+          completionSummary.classList.remove("hidden");
+
+          const knownCount = state.cards.filter(
+            (c) => c.status === "known"
+          ).length;
+          const reviewCount = state.cards.filter(
+            (c) => c.status === "review"
+          ).length;
+
+          statsKnownEl.textContent = knownCount;
+          statsReviewEl.textContent = reviewCount;
+          statsTotalEl.textContent = state.cards.length;
+          
+          // Format time
+          const minutes = Math.floor(state.elapsedTime / 60000);
+          const seconds = Math.floor((state.elapsedTime % 60000) / 1000);
+          statsTimeEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+          const reviewItems = state.cards.filter((c) => c.status === "review");
+          if (reviewItems.length > 0) {
+            reviewList.innerHTML = reviewItems
+              .map((c) => `<li>${c.term}</li>`)
+              .join("");
+            reviewList.parentElement.classList.remove("hidden");
+          } else {
+            reviewList.parentElement.classList.add("hidden");
+          }
+        }
+
+        // --- API CALL ---
+        async function callGeminiApi(prompt, apiKey) {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+          const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
+          
+          try {
+            const response = await fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody),
+            });
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error?.message || "Failed to fetch from API.");
+            }
+            
+            const data = await response.json();
+            const rawText = data.candidates[0]?.content?.parts[0]?.text || "{}";
+            
+            // Try to extract JSON from response
+            const jsonMatch = rawText.match(/```json\n([\s\S]*?)\n```|({[\s\S]*})/);
+            if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+              return jsonMatch[1] || jsonMatch[2];
+            }
+            
+            // If no JSON found, try to parse the raw text directly
+            try {
+              JSON.parse(rawText);
+              return rawText;
+            } catch (e) {
+              throw new Error("Invalid JSON format from AI.");
+            }
+          } catch (error) {
+            console.error("API Error:", error);
+            throw error;
+          }
+        }
+
+        initialize();
+      })();
+    </script>
+  </body>
+</html>

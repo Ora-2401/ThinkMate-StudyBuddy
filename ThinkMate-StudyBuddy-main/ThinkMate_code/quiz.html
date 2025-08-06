@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz Mode - ThinkMate</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #4caf50;
+        --primary-color-dark: #45a049;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .primary-bg {
+        background-color: var(--primary-color);
+      }
+      .primary-bg-dark-hover:hover {
+        background-color: var(--primary-color-dark);
+      }
+      .primary-text {
+        color: var(--primary-color);
+      }
+      .primary-border {
+        border-color: var(--primary-color);
+      }
+      .answer-option:hover {
+        background-color: #f3f4f6;
+      }
+      .answer-option.selected {
+        border-color: var(--primary-color);
+        background-color: #e8f5e9;
+      }
+      .answer-option.correct {
+        background-color: #dcfce7;
+        border-color: #22c55e;
+      }
+      .answer-option.incorrect {
+        background-color: #fee2e2;
+        border-color: #ef4444;
+      }
+      .progress-bar-fill {
+        background-color: var(--primary-color);
+        transition: width 0.5s ease-in-out;
+      }
+      /* Loader Animation */
+      .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      /* Speech recognition animation */
+      .listening {
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0% {
+          background-color: #f0fdf4;
+        }
+        50% {
+          background-color: #dcfce7;
+        }
+        100% {
+          background-color: #f0fdf4;
+        }
+      }
+      /* API Status Indicator */
+      .api-status {
+        display: flex;
+        align-items: center;
+      }
+      .api-status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+      }
+      .api-status-secured {
+        background-color: #10b981;
+      }
+    </style>
+  </head>
+  <body class="h-full">
+    <div class="flex h-full flex-col">
+      <!-- Header Section -->
+      <header class="flex-shrink-0 bg-white shadow-md z-10">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between h-16">
+            <div class="flex items-center">
+              <h1 class="text-2xl font-bold primary-text">📚 ThinkMate</h1>
+              <div class="api-status ml-4">
+                <span class="api-status-indicator api-status-secured"></span>
+                <span class="text-xs text-gray-600">API Secured</span>
+              </div>
+            </div>
+            <div
+              class="flex items-center space-x-2 sm:space-x-4 rounded-lg bg-gray-200 p-1"
+            >
+              <a
+                href="app.html"
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6.253v11.494m-9-5.747h18"
+                  />
+                </svg>
+                Study
+              </a>
+              <span
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors primary-bg text-white"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Quiz
+              </span>
+              <a
+                href="flashcards.html"
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+                Flashcards
+              </a>
+
+              <a
+                href="dashboard.html"
+                class="mode-btn flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-300"
+              >
+                <svg
+                  class="h-5 w-5 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Dashboard
+              </a>
+            </div>
+            <div class="flex items-center">
+              <button
+                id="settings-btn"
+                class="p-2 rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <svg
+                  class="h-6 w-6 text-gray-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- API Key Modal -->
+      <div id="api-key-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+          <h3 class="text-lg font-semibold mb-4">API Key Management</h3>
+          <p class="text-sm text-gray-600 mb-4">
+            API keys are securely managed by the system administrator. Contact support for key rotation.
+          </p>
+          <div class="flex items-center justify-between bg-gray-100 p-3 rounded-md mb-4">
+            <span id="api-key-status" class="text-sm font-medium">🔒 Secured</span>
+            <button id="refresh-api-status" class="text-green-600 hover:text-green-800 text-sm">
+              Refresh Status
+            </button>
+          </div>
+          <div class="flex justify-end space-x-3">
+            <button id="close-api-modal" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-md">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Quiz Content -->
+      <main
+        id="quiz-container"
+        class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6 md:p-8">
+          <!-- Quiz Configuration -->
+          <div id="quiz-config-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Quiz Setup</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Subject</label
+                >
+                <div class="flex">
+                  <select
+                    id="quiz-subject"
+                    class="w-full p-2 border border-gray-300 rounded-md shadow-sm"
+                  ></select>
+                  <button
+                    id="subject-speech-btn"
+                    class="ml-2 p-2 rounded-full bg-gray-200 hover:bg-gray-300"
+                  >
+                    <svg
+                      class="h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"
+                      ></path>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                      <line x1="12" y1="19" x2="12" y2="23"></line>
+                      <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label
+                  for="num-questions"
+                  class="block text-sm font-medium text-gray-700 mb-2"
+                  >Number of Questions</label
+                >
+                <input
+                  type="number"
+                  id="num-questions"
+                  value="5"
+                  min="1"
+                  max="20"
+                  class="w-full p-2 border border-gray-300 rounded-md shadow-sm"
+                />
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Difficulty</label
+                >
+                <div class="flex space-x-4">
+                  <label class="flex items-center"
+                    ><input
+                      type="radio"
+                      name="difficulty"
+                      value="Easy"
+                      class="h-4 w-4 text-green-600 border-gray-300"
+                      checked
+                    />
+                    <span class="ml-2">Easy</span></label
+                  >
+                  <label class="flex items-center"
+                    ><input
+                      type="radio"
+                      name="difficulty"
+                      value="Medium"
+                      class="h-4 w-4 text-green-600 border-gray-300"
+                    />
+                    <span class="ml-2">Medium</span></label
+                  >
+                  <label class="flex items-center"
+                    ><input
+                      type="radio"
+                      name="difficulty"
+                      value="Hard"
+                      class="h-4 w-4 text-green-600 border-gray-300"
+                    />
+                    <span class="ml-2">Hard</span></label
+                  >
+                </div>
+              </div>
+            </div>
+            <div class="mt-8">
+              <button
+                id="start-quiz-btn"
+                class="w-full primary-bg text-white font-bold py-3 px-4 rounded-lg primary-bg-dark-hover transition-colors"
+              >
+                Start Quiz
+              </button>
+            </div>
+          </div>
+
+          <!-- Quiz Active Section -->
+          <div id="quiz-active-section" class="hidden">
+            <!-- Progress Bar -->
+            <div id="progress-section" class="mb-6">
+              <div
+                class="flex justify-between items-center mb-2 text-sm text-gray-600"
+              >
+                <span id="question-counter"></span>
+                <span id="current-score">Score: 0</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  id="progress-bar"
+                  class="progress-bar-fill h-2.5 rounded-full"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Question Display -->
+            <div id="question-display-area">
+              <p
+                id="question-text"
+                class="text-xl font-semibold text-gray-800 mb-6"
+              ></p>
+              <div id="answer-options" class="space-y-4"></div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="mt-8 flex justify-between items-center">
+              <button
+                id="submit-answer-btn"
+                class="primary-bg text-white font-bold py-2 px-6 rounded-lg primary-bg-dark-hover"
+              >
+                Submit
+              </button>
+              <button
+                id="next-question-btn"
+                class="hidden bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-300"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+
+          <!-- Quiz Results Section -->
+          <div id="quiz-results-section" class="hidden text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">
+              Quiz Complete!
+            </h2>
+            <p class="text-xl text-gray-600 mb-2">Your Final Score:</p>
+            <p
+              id="final-score"
+              class="text-5xl font-bold primary-text mb-8"
+            ></p>
+            <div
+              id="results-details"
+              class="text-left space-y-4 max-h-60 overflow-y-auto border p-4 rounded-lg"
+            ></div>
+            <div class="mt-8 flex justify-center space-x-4">
+              <button
+                id="restart-quiz-btn"
+                class="bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-lg hover:bg-gray-300"
+              >
+                Restart Quiz
+              </button>
+              <a
+                href="app.html"
+                class="primary-bg text-white font-bold py-3 px-6 rounded-lg primary-bg-dark-hover"
+                >Return to Study</a
+              >
+            </div>
+          </div>
+
+          <!-- Loader -->
+          <div id="loader-section" class="hidden text-center py-12">
+            <div class="loader mx-auto"></div>
+            <p class="mt-4 text-gray-600">Generating your custom quiz...</p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (() => {
+        // --- STATE MANAGEMENT ---
+        let quizState = {
+          apiKey: "AIzaSyA6yG66yJjqJ362X2ajurQIu9FFkVvpMz0", // Developer-provided API key
+          questions: [],
+          currentQuestionIndex: 0,
+          score: 0,
+          quizActive: false,
+          selectedAnswer: null,
+          answerSubmitted: false,
+          speechRecognition: null,
+          isListening: false,
+        };
+
+        // --- DOM ELEMENTS ---
+        const configSection = document.getElementById("quiz-config-section");
+        const activeSection = document.getElementById("quiz-active-section");
+        const resultsSection = document.getElementById("quiz-results-section");
+        const loaderSection = document.getElementById("loader-section");
+
+        const subjectSelect = document.getElementById("quiz-subject");
+        const startQuizBtn = document.getElementById("start-quiz-btn");
+        const subjectSpeechBtn = document.getElementById("subject-speech-btn");
+
+        const progressBar = document.getElementById("progress-bar");
+        const questionCounter = document.getElementById("question-counter");
+        const currentScoreEl = document.getElementById("current-score");
+
+        const questionTextEl = document.getElementById("question-text");
+        const answerOptionsContainer =
+          document.getElementById("answer-options");
+
+        const submitBtn = document.getElementById("submit-answer-btn");
+        const nextBtn = document.getElementById("next-question-btn");
+
+        const finalScoreEl = document.getElementById("final-score");
+        const resultsDetailsContainer =
+          document.getElementById("results-details");
+        const restartQuizBtn = document.getElementById("restart-quiz-btn");
+
+        const settingsBtn = document.getElementById("settings-btn");
+        const apiKeyModal = document.getElementById("api-key-modal");
+        const closeApiModal = document.getElementById("close-api-modal");
+        const refreshApiStatus = document.getElementById("refresh-api-status");
+
+        // --- INITIALIZATION ---
+        function initialize() {
+          // Load data from main page
+          const materials = JSON.parse(localStorage.getItem("studyMaterials"));
+          if (materials) {
+            const allTopics = new Set([
+              ...materials.topics,
+              ...materials.uploadedFileNames,
+            ]);
+            subjectSelect.innerHTML = [...allTopics]
+              .map((topic) => `<option value="${topic}">${topic}</option>`)
+              .join("");
+          } else {
+            subjectSelect.innerHTML =
+              "<option>Please go back and upload materials first.</option>";
+            startQuizBtn.disabled = true;
+          }
+
+          // Initialize speech recognition
+          initSpeechRecognition();
+
+          // Add event listeners
+          startQuizBtn.addEventListener("click", startQuiz);
+          submitBtn.addEventListener("click", submitAnswer);
+          nextBtn.addEventListener("click", nextQuestion);
+          restartQuizBtn.addEventListener("click", () => location.reload());
+          subjectSpeechBtn.addEventListener(
+            "click",
+            startSubjectSpeechRecognition
+          );
+          
+          // API Modal listeners
+          settingsBtn.addEventListener("click", () => {
+            apiKeyModal.classList.remove("hidden");
+          });
+          closeApiModal.addEventListener("click", () => {
+            apiKeyModal.classList.add("hidden");
+          });
+          refreshApiStatus.addEventListener("click", () => {
+            const status = document.getElementById("api-key-status");
+            status.textContent = "🔒 Secured (Refreshed)";
+            setTimeout(() => {
+              status.textContent = "🔒 Secured";
+            }, 2000);
+          });
+        }
+
+        function initSpeechRecognition() {
+          const SpeechRecognition =
+            window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SpeechRecognition) {
+            subjectSpeechBtn.disabled = true;
+            return;
+          }
+
+          quizState.speechRecognition = new SpeechRecognition();
+          quizState.speechRecognition.continuous = false;
+          quizState.speechRecognition.lang = "en-US";
+          quizState.speechRecognition.interimResults = false;
+          quizState.speechRecognition.maxAlternatives = 1;
+
+          quizState.speechRecognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            subjectSelect.value = transcript;
+          };
+
+          quizState.speechRecognition.onerror = (event) => {
+            console.error("Speech recognition error", event.error);
+            stopSpeechRecognition();
+          };
+
+          quizState.speechRecognition.onend = () => {
+            stopSpeechRecognition();
+          };
+        }
+
+        function startSubjectSpeechRecognition() {
+          if (quizState.speechRecognition && !quizState.isListening) {
+            quizState.isListening = true;
+            subjectSpeechBtn.classList.add("listening");
+            quizState.speechRecognition.start();
+          }
+        }
+
+        function stopSpeechRecognition() {
+          quizState.isListening = false;
+          subjectSpeechBtn.classList.remove("listening");
+        }
+
+        // --- QUIZ LOGIC ---
+
+        async function startQuiz() {
+          configSection.classList.add("hidden");
+          loaderSection.classList.remove("hidden");
+
+          const subject = subjectSelect.value;
+          const numQuestions = document.getElementById("num-questions").value;
+          const difficulty = document.querySelector(
+            'input[name="difficulty"]:checked'
+          ).value;
+
+          try {
+            const prompt = `Generate a ${numQuestions}-question quiz about "${subject}" with ${difficulty} difficulty. For each question, provide the question text, type ('multiple-choice' or 'true-false'), an array of 4 options if multiple-choice, and the correct answer. Respond ONLY with a valid JSON object in the following format: { "questions": [ { "question": "...", "type": "...", "options": ["...", "...", "...", "..."], "answer": "..." } ] }`;
+            const jsonString = await callGeminiApi(prompt, quizState.apiKey);
+            const quizData = JSON.parse(jsonString);
+
+            if (!quizData.questions || quizData.questions.length === 0) {
+              throw new Error("AI did not generate valid questions.");
+            }
+
+            quizState.questions = quizData.questions;
+            quizState.currentQuestionIndex = 0;
+            quizState.score = 0;
+            quizState.quizActive = true;
+
+            loaderSection.classList.add("hidden");
+            activeSection.classList.remove("hidden");
+
+            displayCurrentQuestion();
+          } catch (error) {
+            console.error("Failed to generate or parse quiz:", error);
+            alert(
+              `Failed to generate quiz. Error: ${error.message}. Please try again.`
+            );
+            loaderSection.classList.add("hidden");
+            configSection.classList.remove("hidden");
+          }
+        }
+
+        function displayCurrentQuestion() {
+          if (quizState.currentQuestionIndex >= quizState.questions.length) {
+            showResults();
+            return;
+          }
+
+          quizState.selectedAnswer = null;
+          quizState.answerSubmitted = false;
+
+          const question = quizState.questions[quizState.currentQuestionIndex];
+          questionTextEl.textContent = question.question;
+          answerOptionsContainer.innerHTML = "";
+
+          const options =
+            question.type === "true-false"
+              ? ["True", "False"]
+              : question.options;
+
+          options.forEach((option) => {
+            const optionEl = document.createElement("div");
+            optionEl.className =
+              "answer-option border-2 border-gray-300 p-4 rounded-lg cursor-pointer transition-all";
+            optionEl.textContent = option;
+            optionEl.addEventListener("click", () => {
+              if (quizState.answerSubmitted) return;
+              quizState.selectedAnswer = option;
+              document
+                .querySelectorAll(".answer-option")
+                .forEach((el) => el.classList.remove("selected"));
+              optionEl.classList.add("selected");
+            });
+            answerOptionsContainer.appendChild(optionEl);
+          });
+
+          updateProgress();
+          submitBtn.classList.remove("hidden");
+          nextBtn.classList.add("hidden");
+        }
+
+        function submitAnswer() {
+          if (quizState.selectedAnswer === null) {
+            alert("Please select an answer.");
+            return;
+          }
+
+          quizState.answerSubmitted = true;
+          const question = quizState.questions[quizState.currentQuestionIndex];
+          const isCorrect =
+            quizState.selectedAnswer.toLowerCase() ===
+            question.answer.toLowerCase();
+
+          if (isCorrect) {
+            quizState.score++;
+          }
+
+          // Provide visual feedback
+          document.querySelectorAll(".answer-option").forEach((el) => {
+            const optionText = el.textContent;
+            if (optionText.toLowerCase() === question.answer.toLowerCase()) {
+              el.classList.add("correct");
+            }
+            if (optionText === quizState.selectedAnswer && !isCorrect) {
+              el.classList.add("incorrect");
+            }
+          });
+
+          updateProgress();
+          submitBtn.classList.add("hidden");
+          nextBtn.classList.remove("hidden");
+        }
+
+        function nextQuestion() {
+          quizState.currentQuestionIndex++;
+          displayCurrentQuestion();
+        }
+
+        function showResults() {
+          activeSection.classList.add("hidden");
+          resultsSection.classList.remove("hidden");
+
+          const percentage = Math.round(
+            (quizState.score / quizState.questions.length) * 100
+          );
+          finalScoreEl.textContent = `${percentage}%`;
+
+          resultsDetailsContainer.innerHTML = quizState.questions
+            .map(
+              (q, i) => `
+                <div class="p-2 rounded ${
+                  q.userCorrect ? "bg-green-50" : "bg-red-50"
+                }">
+                    <p class="font-semibold">${i + 1}. ${q.question}</p>
+                    <p class="text-sm">Correct Answer: <span class="font-bold">${
+                      q.answer
+                    }</span></p>
+                </div>
+            `
+            )
+            .join("");
+        }
+
+        function updateProgress() {
+          const progress =
+            (quizState.currentQuestionIndex / quizState.questions.length) * 100;
+          progressBar.style.width = `${progress}%`;
+          questionCounter.textContent = `Question ${
+            quizState.currentQuestionIndex + 1
+          } of ${quizState.questions.length}`;
+          currentScoreEl.textContent = `Score: ${quizState.score}`;
+        }
+
+        // --- API CALL ---
+        async function callGeminiApi(prompt, apiKey) {
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+          const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
+
+          const response = await fetch(apiUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.error.message || "Failed to fetch from API."
+            );
+          }
+          const data = await response.json();
+          // Clean the response to get only the JSON part
+          const rawText = data.candidates[0]?.content?.parts[0]?.text || "{}";
+          const jsonMatch = rawText.match(
+            /```json\n([\s\S]*?)\n```|({[\s\S]*})/
+          );
+          if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+            return jsonMatch[1] || jsonMatch[2];
+          }
+          throw new Error("Invalid JSON format from AI.");
+        }
+
+        // --- START THE APP ---
+        initialize();
+      })();
+    </script>
+  </body>
+</html>
